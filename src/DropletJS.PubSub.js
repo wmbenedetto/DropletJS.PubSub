@@ -173,7 +173,7 @@ if (typeof MINIFIED === 'undefined'){
      */
     var Message = function Message(msgString){
 
-        this.namespace                  = '__default';
+        this.namespace                  = this.DEFAULT_NS;
 
         /* Namespace is specified like Namespace:Foo.bar.baz.QUZ,
          * so if a colon is found, we must separate it from the
@@ -186,12 +186,7 @@ if (typeof MINIFIED === 'undefined'){
         if (msgString.indexOf('.') > -1){
 
             var msgArray                = msgString.split('.');
-
-            this.originator             = msgArray[0] || '*';
-            this.subject                = msgArray[1] || '*';
-            this.verb                   = msgArray[2] || '*';
-            this.descriptor             = msgArray[3] || '*';
-            this.msgArray               = [this.originator,this.subject,this.verb,this.descriptor];
+            this.msgArray               = [msgArray[0] || '*',msgArray[1] || '*',msgArray[2] || '*', msgArray[3] || '*'];
             this.msgString              = this.msgArray.join('.');
 
         } else {
@@ -207,6 +202,8 @@ if (typeof MINIFIED === 'undefined'){
      * @type {Object}
      */
     Message.prototype = {
+
+        DEFAULT_NS                      : '__default',
 
         /**
          * Compares this message to another
@@ -283,7 +280,6 @@ if (typeof MINIFIED === 'undefined'){
      */
     var PubSub = {
 
-        DEFAULT_NAMESPACE               : '__default',
         handlers                        : {},
         subscribers : {
             before                      : [],
@@ -384,7 +380,7 @@ if (typeof MINIFIED === 'undefined'){
             }
 
             var options = {
-                message                 : this.convertMessages(message)
+                message                 : this.toMessage(message)
             };
 
             if (!MINIFIED){
@@ -683,7 +679,7 @@ if (typeof MINIFIED === 'undefined'){
                 if (!MINIFIED){
 
                     var logMsg          = 'Removing handler for ' + msgString + ' message';
-                    logMsg             += (namespace !== this.DEFAULT_NAMESPACE) ? ' in ' + namespace + ' namespace' : '';
+                    logMsg             += (namespace !== options.message.DEFAULT_NS) ? ' in ' + namespace + ' namespace' : '';
 
                     this.log('removeHandlers', logMsg, null, 'TRACE');
                 }
@@ -737,7 +733,7 @@ if (typeof MINIFIED === 'undefined'){
                 throw new Error('Message(s) and handler function must be passed to listen() and/or once()');
             }
 
-            options.message             = this.convertMessages(options.message);
+            options.message             = this.toMessage(options.message);
 
             return options;
         },
@@ -837,7 +833,7 @@ if (typeof MINIFIED === 'undefined'){
                 throw new Error("Message(s) must be passed to publish()");
             }
 
-            options.message             = this.convertMessages(options.message);
+            options.message             = this.toMessage(options.message);
 
             return options;
         },
@@ -848,7 +844,7 @@ if (typeof MINIFIED === 'undefined'){
          * @param message Message string or array of message strings
          * @return {String|Array} Converted message(s)
          */
-        convertMessages : function(message){
+        toMessage : function(message){
             
             /* Convert array of message strings to Message objects */
             if (isArray(message)){
