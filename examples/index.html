@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title>DropletJS.PubSub</title>
+    <script language="JavaScript" type="text/javascript" src="../src/DropletJS.PubSub.js"></script>
+
+    <script type="text/javascript">
+
+        var PS = DropletJS.PubSub;
+        PS.setLogLevel('DEBUG');
+
+
+        PS.once('Foo.bar.baz.FIZ',function(){
+            console.log('Foo.bar.baz.FIZ');
+        });
+
+        PS.listen('*.bar',function(){
+            console.log('*.bar');
+        });
+
+        PS.listen('Foo.bar.baz',function(){
+            console.log('Foo.bar.baz');
+        });
+
+        PS.listen('Foo.bar',function(){
+            console.log('Foo.bar');
+        });
+
+        PS.listen('Foo',function(){
+            console.log('Foo');
+        });
+
+        PS.publish('Foo.bar.baz.FIZ');
+        PS.publish('Foo.bar.baz.FIZ');
+        PS.publish('Foo.bar.baz.FIZ');
+
+        console.log(PS);
+    </script>
+</head>
+<body>
+</body>
+</html>

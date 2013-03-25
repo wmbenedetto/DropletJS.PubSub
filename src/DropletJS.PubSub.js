@@ -2,6 +2,7 @@
 if (typeof MINIFIED === 'undefined'){
     MINIFIED = false;
 }
+
 /**
  *     ____                   __     __      _______
  *    / __ \_________  ____  / /__  / /_    / / ___/
@@ -10,7 +11,7 @@ if (typeof MINIFIED === 'undefined'){
  * /_____/_/   \____/ .___/_/\___/\__/\____//____/
  *                 /_/
  *
- * DropletJS.PubSub : Project description goes here
+ * DropletJS.PubSub : Advanced JavaScript event framework
  *
  * Copyright (c) 2013 Warren Benedetto <warren@transfusionmedia.com>
  *
@@ -39,7 +40,7 @@ if (typeof MINIFIED === 'undefined'){
     global = (typeof global !== 'undefined') ? global : null;
 }());
 
-(function(window,undefined){
+(function(root,undefined){
 
     if (!MINIFIED){
 
@@ -125,157 +126,153 @@ if (typeof MINIFIED === 'undefined'){
     }
 
     /**
-     * Checks whether obj is an array
+     * Checks whether options is an array
      *
-     * @param obj The object to check
+     * @param options The object to check
      */
-    var isArray = function(obj){
-        return typeof obj === 'object' && obj !== null && typeof obj.length === 'number';
+    var isArray = function(options){
+        return typeof options === 'object' && options !== null && typeof options.length === 'number';
     };
 
     /**
      * Checks whether an object is an object literal (non-null, non-array)
      *
-     * @param obj The object to check
+     * @param options The object to check
      * @return {Boolean}
      */
-    var isObjLiteral = function(obj) {
-        return typeof obj === 'object' && obj !== null && typeof obj.length !== 'number';
-    };
-
-    var Message = function Message(data){
-
-        this.namespace                  = '__default';
-
-        this.update(data,true);
+    var isObjLiteral = function(options) {
+        return typeof options === 'object' && options !== null && typeof options.length !== 'number';
     };
 
     /**
-     * TemplateBlock class prototype
+     * Delete property from object in IE-safe way
+     *
+     * @param obj Object containing property
+     * @param prop Property to delete
+     */
+    var safeDelete = function(obj,prop){
+
+        try {
+            delete obj[prop];
+        } catch (e){
+            obj[prop] = undefined;
+        }
+    };
+
+    /**
+     * Converts dot-delimited string into object literal with
+     * properties corresponding to message parts. Any parts
+     * that don't exist are set to wildcards.
+     *
+     * Strings are formatted like:
+     *
+     * Namespace:Originator.subject.verb.DESCRIPTOR
+     *
+     * @param msgString Dot-delimited string with optional namespace
+     * @constructor
+     */
+    var Message = function Message(msgString){
+
+        this.namespace                  = '__default';
+
+        /* Namespace is specified like Namespace:Foo.bar.baz.QUZ,
+         * so if a colon is found, we must separate it from the
+         * rest of the message string */
+        if (msgString.indexOf(':') > -1){
+            this.namespace              = msgString.substr(0,msgString.indexOf(':'));
+            msgString                   = msgString.substr((msgString.indexOf(':')+1),msgString.length);
+        }
+
+        if (msgString.indexOf('.') > -1){
+
+            var msgArray                = msgString.split('.');
+
+            this.originator             = msgArray[0] || '*';
+            this.subject                = msgArray[1] || '*';
+            this.verb                   = msgArray[2] || '*';
+            this.descriptor             = msgArray[3] || '*';
+            this.msgArray               = [this.originator,this.subject,this.verb,this.descriptor];
+            this.msgString              = this.msgArray.join('.');
+
+        } else {
+
+            this.msgArray               = [msgString];
+            this.msgString              = msgString;
+        }
+    };
+
+    /**
+     * Message class prototype
      *
      * @type {Object}
      */
     Message.prototype = {
 
-        namespace                       : null,
-        originator                      : null,
-        subject                         : null,
-        verb                            : null,
-        descriptor                      : null,
-        bitMask                         : null,
-
         /**
-         * Updates message properties with new values
+         * Compares this message to another
          *
-         * @param data The data with which to update the message
-         * @param override If true, data will overwrite any existing values
+         * If all segments are either matching or wildcards, then the messages are equivalent.
+         *
+         * For example:
+         *
+         * foo.bar.baz      === foo.bar.baz
+         * *.bar.*          === foo.bar.baz
+         * foo.*.baz        === foo.bar.baz
+         * goo.*.baz        !== foo.bar.baz
+         *
+         * We only return true if the this message if more specific than the other. Say we want
+         * to trigger a listener when the message and listener match exactly, or when the listener is
+         * more general than the message, but not when the message is more general than the listener.
+         *
+         * For example:
+         *
+         * If message is foo.bar.baz and listener is foo.bar.baz, trigger listener.
+         * If message is foo.bar.baz and listener is foo.bar.*, trigger listener.
+         * If message is foo.bar.* and listener is foo.bar.baz, DON'T trigger listener.
+         *
+         * @param msgString The message to compare
          */
-        update : function(data,override){
+        matches : function(msgString){
 
-            override                    = (typeof override === 'undefined') ? true : override;
-
-            if (typeof data === 'string'){
-                data                    = this.createDataObject(data);
+            if (this.msgString === msgString){
+                return true;
             }
 
-            for (var i in data){
+            /* Split messages into arrays at the dots */
+            var msg1Array               = this.msgArray;
+            var msg2Array               = msgString.split('.');
 
-                if (data.hasOwnProperty(i) && typeof data[i] !== 'undefined'){
+            /* If the messages don't have the same number of segments, they aren't equivalent */
+            if (msg1Array.length !== msg2Array.length){
+                return false;
+            }
 
-                    this[i]             = (this[i] === null || override === true) ? data[i] : this[i];
+            var msg1Bitmask             = '';
+            var msg2Bitmask             = '';
+            var longerMessageLength     = (msg1Array.length >= msg2Array.length) ? msg1Array.length : msg2Array.length;
+
+            /* Loop through segments and compare them */
+            for (var i=0;i<longerMessageLength;i++){
+
+                /* If neither segment is a wildcard, and the segments don't match, then the messages aren't equivalent */
+                if (msg1Array[i] !== '*' && msg2Array[i] !== '*' && msg1Array[i] !== msg2Array[i]){
+                    return false;
                 }
+
+                msg1Bitmask            += (msg1Array[i] === '*') ? '0' : '1';
+                msg2Bitmask            += (msg2Array[i] === '*') ? '0' : '1';
             }
+
+            return msg1Bitmask >= msg2Bitmask;
         },
 
         /**
-         * Converts object to string. Null or undefined properties
-         * are converted to wildcards (asterisks).
+         * Returns serialized message string
+         *
+         * @returns {String}
          */
-        serialize : function(){
-
-            var segments = [
-
-                this.originator         || '*',
-                this.subject            || '*',
-                this.verb               || '*',
-                this.descriptor         || '*'
-            ];
-
-            return segments.join('.');
-        },
-
-        /**
-         * Converts dot-delimited string into object literal with
-         * properties corresponding to message parts. Any parts
-         * that don't exist are set to wildcards.
-         *
-         * Strings are formatted like:
-         *
-         * Namespace:Originator.subject.verb.DESCRIPTOR
-         *
-         * @param data Dot-delimited string with optional namespace
-         * @return {Object}
-         */
-        createDataObject : function(data){
-
-            var namespace               = this.namespace;
-
-            /* Namespace is specified like Namespace:Foo.bar.baz.QUZ,
-             * so if a colon is found, we must separate it from the
-             * rest of the data string */
-            if (data.indexOf(':') > -1){
-                namespace               = data.substr(0,data.indexOf(':'));
-                data                    = data.substr((data.indexOf(':')+1),data.length);
-            }
-
-            var dataArray               = data.split('.');
-
-            return {
-                namespace               : namespace,
-                originator              : dataArray[0],
-                subject                 : dataArray[1],
-                verb                    : dataArray[2],
-                descriptor              : dataArray[3]
-            }
-        },
-
-        /**
-         * Gets bitmask for segments
-         *
-         * For example, the bitmask for Foo.data.*.* is 1.1.0.0
-         *
-         * This can be used to sort messages based how specific they are. The
-         * more specific a message is (i.e. the more 1's it has), the higher it will
-         * appear in a list reverse-sorted by bitmask.
-         */
-        getBitmask : function(){
-
-            if (this.bitMask === null){
-
-                var segments = [
-
-                    this.originator     ? 1 : 0,
-                    this.subject        ? 1 : 0,
-                    this.verb           ? 1 : 0,
-                    this.descriptor     ? 1 : 0
-                ];
-
-                this.bitMask            = segments.join('.');
-            }
-
-            return this.bitMask;
-        },
-
-        getNamespace : function(){
-            return this.namespace;
-        },
-
-        getDescriptor : function(){
-            return this.descriptor || null;
-        },
-
-        getVerb : function(){
-            return this.verb || null;
+        toString : function(){
+            return this.msgString;
         }
     };
 
@@ -287,11 +284,11 @@ if (typeof MINIFIED === 'undefined'){
     var PubSub = {
 
         DEFAULT_NAMESPACE               : '__default',
-
-        globalHandlers                  : {},
-        channelHandlers                 : {},
-        relays                          : {},
-        subscribers                     : {},
+        handlers                        : {},
+        subscribers : {
+            before                      : [],
+            after                       : []
+        },
 
         /**
          * Gets public API methods
@@ -301,9 +298,7 @@ if (typeof MINIFIED === 'undefined'){
         getAPI : function(){
 
              return {
-                addRelay                : this.addRelay.bind(this),
                 clear                   : this.clear.bind(this),
-                compare                 : this.compare.bind(this),
                 listen                  : this.listen.bind(this),
                 once                    : this.once.bind(this),
                 publish                 : this.publish.bind(this),
@@ -323,7 +318,6 @@ if (typeof MINIFIED === 'undefined'){
          * PubSub.listen({
          *     message                  : 'someMessage',
          *     handler                  : messageHandler,
-         *     channel                  : 'SomeChannel',    // optional
          *     async                    : false             // optional. True if handler is asynchronous
          * });
          *
@@ -331,25 +325,19 @@ if (typeof MINIFIED === 'undefined'){
          */
         listen : function(){
 
-            var args                    = Array.prototype.slice.call(arguments);
-            var obj                     = {};
+            var options                 = this.processListenArgs(Array.prototype.slice.call(arguments));
 
-            if (isObjLiteral(args[0])){
-
-                obj                     = args[0];
-
-            } else {
-
-                if (typeof args[0] === 'string' || isArray(args[0])){
-                    obj.message         = args[0];
-                }
-
-                if (typeof args[1] === 'function'){
-                    obj.handler         = args[1];
-                }
+            if (!MINIFIED){
+                this.log('listen', 'Adding listener', options);
             }
 
+            /* Call listen() for each message in array */
+            if (isArray(options.message)){
+                this.each(options,this.listen.bind(this));
+                return null;
+            }
 
+            this.addHandler(options);
         },
 
         /**
@@ -362,6 +350,20 @@ if (typeof MINIFIED === 'undefined'){
          */
         once : function(){
 
+            var options                 = this.processListenArgs(Array.prototype.slice.call(arguments));
+            options.limit               = 1;
+
+            if (!MINIFIED){
+                this.log('once', 'Adding one-time listener', options);
+            }
+
+            /* Call once() for each message in array */
+            if (isArray(options.message)){
+                this.each(options,this.once.bind(this));
+                return null;
+            }
+
+            this.addHandler(options);
         },
 
         /**
@@ -370,38 +372,34 @@ if (typeof MINIFIED === 'undefined'){
          * Valid forms:
          *
          * PubSub.stop('someMessage');
-         * PubSub.stop('someMessage','SomeChannel');
          *
-         * PubSub.stop({
-         *     message                  : 'someMessage',
-         *     channel                  : 'SomeChannel'     // optional
-         * });
-         *
-         * ... plus all the above forms with an array of messages in place of a single message
+         * ... plus the above form with an array of messages in place of a single message
          *
          * @return {*}
          */
-        stop : function(){
+        stop : function(message){
 
-            var args                    = Array.prototype.slice.call(arguments);
-            var obj                     = {};
-
-            if (isObjLiteral(args[0])){
-
-                obj                     = args[0];
-
-            } else {
-
-                if (typeof args[0] === 'string' || isArray(args[0])){
-                    obj.message         = args[0];
-                }
-
-                if (typeof args[1] === 'function'){
-                    obj.channel         = args[1];
-                }
+            if (message){
+                throw new Error('Message(s) must be passed to stop()');
             }
-        },
 
+            var options = {
+                message                 : this.convertMessages(message)
+            };
+
+            if (!MINIFIED){
+                this.log('stop', 'Stopping listener', options);
+            }
+
+            /* Call stop() for each message in array */
+            if (isArray(options.message)){
+                this.each(options,this.stop.bind(this));
+                return null;
+            }
+
+            this.removeHandlers(options);
+        },
+        
         /**
          * subscribe() registers a handler to be called every time a message
          * is published. Typical use-cases for this would be a reporting mechanism
@@ -411,18 +409,13 @@ if (typeof MINIFIED === 'undefined'){
          *
          * By default, subscribed handlers are called after all message handlers are
          * called. Setting the 'phase' param to 'before' will tell PubSub to call the
-         * subscribed handler before the message handlers.
+         * subscribed handler before the message handlers instead.
          *
          * An optional namespace can be set so that subscribers can be removed later,
          * limiting the removal to subscribers in a namespace.
          *
-         * Finally, a boolean async param can be set. If this is set to true,
-         * a callback function will be passed to the handler. PubSub will not call
-         * any additional handlers until this callback has been executed. The
-         * typical use-case for this is a subscriber that must wait for an ajax
-         * call to return. Once an ajax result is returned, the callback can be called
-         * and PubSub will continue publishing the message to the rest of the
-         * subscribed and/or message handlers.
+         * Finally, a boolean async param can be set. This tells PubSub to wait to call
+         * any onPublish() function until after the subscriber handler has been executed.
          *
          * Valid forms:
          *
@@ -430,38 +423,22 @@ if (typeof MINIFIED === 'undefined'){
          *
          * PubSub.subscribe({
          *     handler                  : messageHandler,
-         *     async                    : true,             // optional. True if handler is asynchronous
          *     namespace                : 'SomeNamespace',  // optional
-         *     phase                    : 'before'          // optional
+         *     phase                    : 'before',         // optional
+         *     async                    : true              // optional. True if handler is asynchronous
          * });
          */
         subscribe : function(){
 
-            var args                    = Array.prototype.slice.call(arguments);
-            var obj                     = {};
+            var options                 = this.processSubscribeArgs(Array.prototype.slice.call(arguments));
+            var phase                   = options.phase;
 
-            if (isObjLiteral(args[0])){
-
-                obj                     = args[0];
-
-            } else {
-
-                if (typeof args[0] === 'function'){
-                    obj.handler         = args[0];
-                }
-
-                if (typeof args[1] === 'boolean'){
-                    obj.async           = args[1];
-                }
-
-                if (typeof args[2] === 'string'){
-                    obj.namespace       = args[2];
-                }
-
-                if (typeof args[3] === 'string'){
-                    obj.phase           = args[3];
-                }
+            if (!MINIFIED){
+                this.log('subscribe', 'Adding subscriber', options);
             }
+
+            this.subscribers[phase]     = this.subscribers[phase] || [];
+            this.subscribers[phase].push(options);
         },
 
         /**
@@ -482,21 +459,32 @@ if (typeof MINIFIED === 'undefined'){
          */
         unsubscribe : function(){
 
-            var args                    = Array.prototype.slice.call(arguments);
-            var obj                     = {};
+            var options                 = this.processUnsubscribeArgs(Array.prototype.slice.call(arguments));
 
-            if (isObjLiteral(args[0])){
+             /* If "phase" isn't specified, remove before and after */
+            if (!options.phase){
 
-                obj                     = args[0];
+                this.unsubscribe(options.namespace,'before');
+                this.unsubscribe(options.namespace,'after');
 
-            } else {
+                return null;
+            }
 
-                if (typeof args[0] === 'string'){
-                    obj.namespace       = args[0];
-                }
+            var namespace               = options.namespace;
+            var phase                   = options.phase;
+            var subscribers             = this.subscribers[phase];
 
-                if (typeof args[1] === 'string'){
-                    obj.phase           = args[1];
+            if (!MINIFIED){
+                this.log('unsubscribe', 'Unsubscribe from ' + phase + ' phase' + ((namespace) ? ' in ' +namespace + ' namespace' : ''), options);
+            }
+
+            if (isArray(subscribers)){
+
+                for (var i=0;i<subscribers.length;i++){
+
+                    if (!namespace || subscribers[i].namespace === namespace){
+                        subscribers.splice(i,1);
+                    }
                 }
             }
         },
@@ -509,7 +497,6 @@ if (typeof MINIFIED === 'undefined'){
          *
          * PubSub.publish({
          *     message                  : 'someMessage',
-         *     relay                    : 'SOME_RELAY',     // optional
          *     payload                  : payloadObject,    // optional
          *     onComplete               : onCompleteFunc,   // optional
          *     onPublish                : onPublishFunc     // optional
@@ -519,76 +506,395 @@ if (typeof MINIFIED === 'undefined'){
          */
         publish : function(){
 
-            var args                    = Array.prototype.slice.call(arguments);
-            var obj                     = {};
+            var options                 = this.processPublishArgs(Array.prototype.slice.call(arguments));
 
-            if (isObjLiteral(args[0])){
+            if (isArray(options.message)){
 
-                obj                     = args[0];
+                /* If an onComplete has been defined, store it in a local variable,
+                 * then delete it from the data object. This is done so that onComplete
+                 * is only called once the each() iterator is complete, and not when each
+                 * iteration is complete. */
+                var onComplete          = options.onComplete;
+                options.onComplete      = null;
 
-            } else {
+                /* Call publish() for each message in array */
+                this.each(options,this.publish.bind(this),onComplete);
 
-                if (typeof args[0] === 'string' || isArray(args[0])){
-                    obj.message         = args[0];
+                return null;
+            }
+
+            var msgString               = options.message.toString();
+
+            if (!MINIFIED){
+                this.log('publish', '# START publishing '+msgString, options);
+            }
+
+            var message                 = options.message;
+            var payload                 = options.payload;
+            var onPublish               = options.onPublish;
+            var publishTo               = this.subscribers['before']
+                                            .concat(this.getHandlers(message))
+                                            .concat(this.subscribers['after']);
+
+            for (var i=0;i<publishTo.length;i++){
+
+                if (publishTo[i].limit === null || publishTo[i].count < publishTo[i].limit){
+
+                    var result          = (publishTo[i].async) ?
+                                           publishTo[i].handler(message,payload,onPublish) :
+                                           publishTo[i].handler(message,payload);
+
+                    if (publishTo[i].async !== true && typeof onPublish === 'function'){
+                        onPublish(result);
+                    }
+
+                    publishTo[i].count += 1;
                 }
 
-                if (typeof args[1] !== undefined){
-                    obj.payload         = args[1];
+                if (typeof publishTo[i].limit === 'number' && publishTo[i].count === publishTo[i].limit){
+                    this.removeHandlers(options,i);
                 }
             }
 
+            if (!MINIFIED){
+                this.log('publish', '# END publishing ' + msgString, options);
+            }
+
+            if (typeof options.onComplete === 'function'){
+                options.onComplete();
+            }
         },
 
         /**
-         * Clears all handlers, relays, and subscribers
+         * Gets all handlers that match the published message (including those
+         * that match by wildcard, if applicable)
+         *
+         * @param message The message for which to get handlers
+         * @returns {Array}
+         */
+        getHandlers : function(message){
+
+            var handlers                = [];
+
+            for (var msgString in this.handlers){
+
+                if (this.handlers.hasOwnProperty(msgString) && message.matches(msgString)){
+                    handlers            = handlers.concat(this.handlers[msgString]);
+                }
+            }
+
+            return handlers;
+        },
+
+        /**
+         * Clears all handlers and subscribers
          */
         clear : function(){
 
+            if (!MINIFIED){
+                this.log('clear', 'Clearing PubSub');
+            }
+
+            this.handlers               = {};
+
+            this.subscribers = {
+                before                  : [],
+                after                   : []
+            };
         },
 
         /**
-         * Adds a relay to which messages can be published.
+         * Iterates over an array of messages, passing each one to a function
+         * as part of an object containing the rest of the properties required
+         * for the function.
          *
-         * A relay is an array of channels. Listeners can optionally listen on one of a relay's channels.
-         * When a message is published to the relay, the handlers for each channel are called in order.
-         * All the handlers for a channel are called before the handlers for the next channel are called.
+         * For example, the data object may contains messages, plus payload and
+         * callbacks. The object is passed through the function with one of the
+         * messages, plus the payload and callbacks. This is repeated for each
+         * message in the array.
          *
-         * For example, consider a relay of ['Model','Controller','View'] called INCOMING_UI.
-         *
-         * A message UI.tab.opened.FOO_BAR is published on the INCOMING_UI channel. First, all the
-         * listeners listening for that message on the Model channel are called. Then all the
-         * listeners on the Controller channel are called. Finally, all the listeners on the View
-         * channel are called.
-         *
-         * This is useful when, for example, you want to make sure a model's state is updated
-         * to indicate the new tab that is opened, then you want the controller to fetch content
-         * for that tab, and finally you want the view to display that content in the opened tab.
-         *
-         * @param name The name of the relay. CAPS_WITH_UNDERSCORES by convention.
-         * @param relay Array of channel names. Channels are arbitrary strings.
+         * @param data Array of messages over which to iterate
+         * @param fn Function to call on each iteration
+         * @param onComplete Function to call once iterator is complete
          */
-        addRelay : function(name,relay){
+        each : function(data,fn,onComplete){
 
+            /* Call function for each message in array */
+            for (var i=0;i<data.message.length;i++){
+
+                var thisData            = {};
+
+                /* Copy properties of data to new object */
+                for (var j in data){
+
+                    if (data.hasOwnProperty(j) && j !== 'message'){
+                        thisData[j]     = data[j];
+                    }
+                }
+
+                thisData.message        = data.message[i];
+
+                fn(thisData)
+            }
+
+            if (typeof onComplete === 'function'){
+                onComplete();
+            }
         },
 
         /**
-         * Gets relay by relay name
+         * Adds handlers for message
          *
-         * @param name The name of the relay to get
-         * @return {Array}
+         * @param options Object containing listen() options
          */
-        getRelay : function(name){
+        addHandler : function(options){
 
+            var msgString               = options.message.toString();
+
+            if (!MINIFIED){
+                this.log('addHandler', 'Adding handler for '+msgString+' message', null, 'TRACE');
+            }
+
+            this.handlers[msgString]    = this.handlers[msgString] || [];
+
+            this.handlers[msgString].push({
+                namespace               : options.message.namespace,
+                handler                 : options.handler,
+                async                   : options.async,
+                limit                   : (typeof options.limit === 'number')? options.limit : null,
+                count                   : 0
+            });
         },
 
         /**
-         * Checks whether the relay exists
+         * Removes handlers for given message
          *
-         * @param name The name of the relay to check
-         * @return {Boolean}
+         * @param options Data object containing message to remove handler for
+         * @param handlerNum The index of the handler to remove. If none specified, all handlers are removed.
          */
-        hasRelay : function(name){
+        removeHandlers : function(options,handlerNum){
 
+            var msgString               = options.message.toString();
+            var namespace               = options.message.namespace;
+            var handlers                = this.handlers;
+
+            if (handlers && handlers[msgString]){
+
+                if (!MINIFIED){
+
+                    var logMsg          = 'Removing handler for ' + msgString + ' message';
+                    logMsg             += (namespace !== this.DEFAULT_NAMESPACE) ? ' in ' + namespace + ' namespace' : '';
+
+                    this.log('removeHandlers', logMsg, null, 'TRACE');
+                }
+
+                if (typeof handlerNum === 'number'){
+
+                    if (handlers[msgString][handlerNum].namespace === namespace){
+                        handlers[msgString].splice(handlerNum,1);
+                    }
+
+                } else {
+
+                    for (var i=0;i<handlers[msgString].length;i++){
+
+                        if (handlers[msgString][i].namespace === namespace){
+                            handlers[msgString].splice(i,1);
+                        }
+                    }
+                }
+
+                if (handlers[msgString].length === 0){
+                    safeDelete(handlers,msgString);
+                }
+            }
+        },
+
+        /**
+         * Processes arguments passed to listen() or once() methods, validating them
+         * and setting defaults as needed
+         *
+         * Returns object with message, handler, and/or async properties defined
+         *
+         * @param args Array of args to process
+         * @return {Object} Object containing processed args
+         */
+        processListenArgs : function(args){
+
+            var options                 = {};
+
+            if (isObjLiteral(args[0])){
+
+                options                 = args[0];
+
+            } else {
+
+                options.message         = (typeof args[0] === 'string' || isArray(args[0])) ? args[0] : null;
+                options.handler         = (typeof args[1] === 'function') ? args[1] : null;
+            }
+
+            if (!options.message || typeof options.handler !== 'function'){
+                throw new Error('Message(s) and handler function must be passed to listen() and/or once()');
+            }
+
+            options.message             = this.convertMessages(options.message);
+
+            return options;
+        },
+
+        /**
+         * Processes arguments passed to subscribe() method, validating them
+         * and setting defaults as needed
+         *
+         * Returns object with handler, async, namespace and/or phase
+         *
+         * @param args Array of args to process
+         * @return {Object} Object containing processed args
+         */
+        processSubscribeArgs : function(args){
+
+            var options                 = {};
+
+            if (isObjLiteral(args[0])){
+
+                options                 = args[0];
+
+            } else {
+
+                options.handler         = (typeof args[0] === 'function') ? args[0] : null;
+            }
+
+            if (typeof options.handler !== 'function'){
+                throw new Error("Handler must be passed to subscribe()");
+            }
+
+            options.phase               = options.phase || 'after';
+            options.limit               = null;
+            options.count               = 0;
+
+            if (options.phase && !(options.phase in { before : 1, after : 1 } )){
+                throw new Error(options.phase+" is not a valid phase for subscribe().");
+            }
+
+            return options;
+        },
+
+        /**
+         * Processes arguments passed to unsubscribe() method, validating them
+         * and setting defaults as needed
+         *
+         * Returns object with namespace and/or phase
+         *
+         * @param args Array of args to process
+         * @return {Object} Object containing processed args
+         */
+        processUnsubscribeArgs : function(args){
+
+            var options                 = {};
+
+            if (isObjLiteral(args[0])){
+
+                options                 = args[0];
+
+            } else {
+
+                options.namespace       = (typeof args[0] === 'string') ? args[0] : null;
+                options.phase           = (typeof args[1] === 'string') ? args[1] : null;
+            }
+
+            if (options.phase && !(options.phase in { before : 1, after : 1 } )){
+                throw new Error(options.phase+" is not a valid phase for unsubscribe().");
+            }
+
+            return options;
+        },
+
+        /**
+         * Processes arguments passed to publish() method, validating them
+         * and setting defaults as needed
+         *
+         * Returns object with message, payload, onComplete, and/or onPublish
+         * properties defined
+         *
+         * @param args Array of args to process
+         * @return {Object} Object containing processed args
+         */
+        processPublishArgs : function(args){
+
+            var options                 = {};
+
+            if (isObjLiteral(args[0])){
+
+                options                 = args[0];
+
+            } else {
+
+                options.message         = (typeof args[0] === 'string' || isArray(args[0])) ? args[0] : null;
+                options.payload         = (typeof args[1] !== 'undefined') ? args[1] : null;
+            }
+
+            if (!options.message){
+                throw new Error("Message(s) must be passed to publish()");
+            }
+
+            options.message             = this.convertMessages(options.message);
+
+            return options;
+        },
+
+        /**
+         * Converts message strings to Message objects
+         *
+         * @param message Message string or array of message strings
+         * @return {String|Array} Converted message(s)
+         */
+        convertMessages : function(message){
+            
+            /* Convert array of message strings to Message objects */
+            if (isArray(message)){
+
+                var messageArray        = [];
+
+                for (var i=0;i<message.length;i++){
+
+                    if (!(message[i] instanceof Message)){
+                        messageArray[i] = new Message(message[i]);
+                    }
+                }
+
+                message                 = messageArray;
+            }
+            /* Convert single message string to Message object */
+            else if (message && !(message instanceof Message)){
+
+                message                 = new Message(message);
+            }
+            
+            return message;
+        },
+
+        /**
+         * Alias for global log(). Prepends PubSub to funcName.
+         *
+         * @param funcName The name of the function generating the log message
+         * @param message The message to log
+         * @param payload Data object
+         * @param level Log level (ERROR, WARN, INFO, DEBUG)
+         */
+        log : function(funcName,message,payload,level){
+
+            if (!MINIFIED){
+                log('DropletJS.PubSub.'+funcName,message,payload,level);
+            }
+        },
+
+        /**
+         * Sets the log level
+         *
+         * @param level OFF, ERROR, WARN, INFO, DEBUG, or TRACE
+         */
+        setLogLevel : function(level){
+            logLevel                    = level;
         }
     };
 
