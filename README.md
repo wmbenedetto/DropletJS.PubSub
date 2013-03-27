@@ -6,7 +6,7 @@ DropletJS.PubSub is an advanced JavaScript event library, specifically designed 
 
 There are literally dozens of JavaScript event frameworks, and most of them do the same basic things: events get published, and listeners handle the events. Pretty simple.
 
-So why should you use DropletJS.PubSub? Well, if all you need is publishers and listeners, maybe you shouldn't. 
+So why should you use DropletJS.PubSub? Well, if all you need is publishers and listeners, you shouldn't. 
 
 Instead, you should use Backbone, or jQuery, or EventEmitter, or any of the other popular solutions. They're more widely implemented, they're probably faster, and they may already be available in your app (like if you're already using Backbone or jQuery anyway).
 
