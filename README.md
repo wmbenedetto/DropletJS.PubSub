@@ -98,6 +98,119 @@ Listeners can be flagged as asynchronous. Asynchronous listeners allow you to re
 
 DropletJS.PubSub's `listen`, `once`, `publish`, and `stop` methods all accept arrays of messages, so you can simultaneously publish multiple messages, or you can listen for multiple messages using the same handler. 
 
+## Quick install
+
+coming soon
+
+## Quick start
+
+coming soon
+
+## Messages
+
+DropletJS.PubSub refers to events as *messages*. Messages are published; listeners and subscribers handle published messages.
+
+A message can be any arbitrary string. It can be something as simple `click` or `keyup`, or as complex as `DAMN_USER_DONE_DID_SOMETHING_STUPID`. Whatever your app needs. 
+
+That said, there is a built-in message syntax that can be very helpful for structuring complex applications. 
+
+### Message syntax
+
+DropletJS.PubSub messages follow the following pattern:
+
+```
+Originator.subject.verb.DESCRIPTOR
+```
+
+* **Originator** describes where the message was published from. This will usually be the name of a module or class.
+
+* **Subject** and **verb** combine to explain what caused the message to be published, i.e. `button.clicked`, `form.submitted`, `error.detected`, etc. By convention, verbs should be past tense, since the message generally describes something that just happened. However, that's just convention -- if it makes more sense in your app to use present tense, or mix-and-match present and past tense, that's fine too.
+
+* **DESCRIPTOR** is an optional string that can be used to disambiguate similar events. For example, `button.clicked.SUBMIT` vs `button.clicked.CANCEL` vs `button.clicked.NO_THANKS`. By convention, descriptors are ALL_CAPS with underscores used in place of spaces.
+
+### Publishing messages
+
+When messages are published, best practice is to always use an originator, subject, and verb. The descriptor is optional. 
+
+For example:
+
+```
+DropletJS.PubSub.publish('ShoppingCart.item.added.SKU23426081350716');
+DropletJS.PubSub.publish('ShoppingCart.form.submitted');
+DropletJS.PubSub.publish('ShoppingCart.error.detected.INVALID_CREDIT_CARD');
+
+DropletJS.PubSub.publish('CommentBox.key.pressed');
+DropletJS.PubSub.publish('CommentBox.comment.submitted');
+DropletJS.PubSub.publish('CommentBox.result.returned.SUCCESS');
+```
+
+### Listening for messages
+
+When listening for messages, each segment of the message is optional -- a wildcard can be used instead. The more wildcards you use, the more messages the listener can/will respond to.
+
+For example, you can listen for a very specific message. The following listener will only fire when an item with a specific SKU (which appears as the descriptor) is added to the shopping cart:
+
+```
+DropletJS.PubSub.listen('ShoppingCart.item.added.SKU23426081350716'); 
+```
+
+That's probably not terribly useful though. You probably want something a little more generic, that can respond whenever *any* item is added to the cart. This listener will fire for any `ShoppingCart.item.added` message, regardless of the descriptor.
+
+```
+DropletJS.PubSub.listen('ShoppingCart.item.added.*'); 
+```
+
+We can actually simplify even more. When a wildcard appears at the end of a message, it can be omitted entirely. Because DropletJS.PubSub is expecting a 4-segment message, it will automatically replace any missing segments with wildcards.
+
+```
+// This will respond to any item being added.
+DropletJS.PubSub.listen('ShoppingCart.item.added.*');  
+
+// So will this. It's functionally identical to the example above.
+DropletJS.PubSub.listen('ShoppingCart.item.added');    
+
+// This will respond to anything that happens with an item, regardless of verb
+DropletJS.PubSub.listen('ShoppingCart.item');    
+
+// This will respond to anything that is published from ShoppingCart
+DropletJS.PubSub.listen('ShoppingCart');   
+```
+
+So when *do* you need to use a wildcard? When it's not at the end of the message.
+
+For example, you might want to listen for error messages from any originator: 
+
+```
+DropletJS.PubSub.listen('*.error.detected');
+```
+
+Or maybe you want to listen for any time something is clicked in the shopping cart: 
+
+```
+DropletJS.PubSub.listen('ShoppingCart.*.clicked');
+```
+
+## Examples
+
+coming soon
+
+## API
+### listen('someMessage',messageHandler) OR listen(configObj)
+---
+### once('someMessage',messageHandler) OR once(configObj)
+---
+### publish('someMessage',payload) OR publish(configObj)
+---
+### stop('someMessage')
+---
+### subscribe(handler) or subscribe(configObj)
+---
+### unsubscribe(namespace,phase) or unsubscribe(configObj)
+---
+### clear()
+---
+## FAQ
+
 ## Questions? Bugs? Suggestions?
 
 Please submit all bugs, questions, and suggestions via the [Issues](https://github.com/wmbenedetto/DropletJS.PubSub/issues) section so everyone can benefit from the answer.
