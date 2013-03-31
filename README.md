@@ -94,6 +94,10 @@ Alternately, onPublish callbacks can be used to receive the results of asynchron
 
 Listeners can be flagged as asynchronous. Asynchronous listeners allow you to return results of async functions (i.e. AJAX requests) via callbacks without blocking your entire app.
 
+### Multiple messages
+
+DropletJS.PubSub's `listen`, `once`, `publish`, and `stop` methods all accept arrays of messages, so you can simultaneously publish multiple messages, or you can listen for multiple messages using the same handler. 
+
 ## Questions? Bugs? Suggestions?
 
 Please submit all bugs, questions, and suggestions via the [Issues](https://github.com/wmbenedetto/DropletJS.PubSub/issues) section so everyone can benefit from the answer.
