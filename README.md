@@ -118,7 +118,7 @@ That said, there is a built-in message syntax that can be very helpful for struc
 
 DropletJS.PubSub messages follow the following pattern:
 
-```
+```javascript
 Originator.subject.verb.DESCRIPTOR
 ```
 
@@ -134,7 +134,7 @@ When messages are published, best practice is to always use an originator, subje
 
 For example:
 
-```
+```javascript
 DropletJS.PubSub.publish('ShoppingCart.item.added.SKU23426081350716');
 DropletJS.PubSub.publish('ShoppingCart.form.submitted');
 DropletJS.PubSub.publish('ShoppingCart.error.detected.INVALID_CREDIT_CARD');
@@ -150,19 +150,19 @@ When listening for messages, each segment of the message is optional -- a wildca
 
 For example, you can listen for a very specific message. The following listener will only fire when an item with a specific SKU (which appears as the descriptor) is added to the shopping cart:
 
-```
+```javascript
 DropletJS.PubSub.listen('ShoppingCart.item.added.SKU23426081350716'); 
 ```
 
 That's probably not terribly useful though. You probably want something a little more generic, that can respond whenever *any* item is added to the cart. This listener will fire for any `ShoppingCart.item.added` message, regardless of the descriptor.
 
-```
+```javascript
 DropletJS.PubSub.listen('ShoppingCart.item.added.*'); 
 ```
 
 We can actually simplify even more. When a wildcard appears at the end of a message, it can be omitted entirely. Because DropletJS.PubSub is expecting a 4-segment message, it will automatically replace any missing segments with wildcards.
 
-```
+```javascript
 // This will respond to any item being added.
 DropletJS.PubSub.listen('ShoppingCart.item.added.*');  
 
@@ -180,13 +180,13 @@ So when *do* you need to use a wildcard? When it's not at the end of the message
 
 For example, you might want to listen for error messages from any originator: 
 
-```
+```javascript
 DropletJS.PubSub.listen('*.error.detected');
 ```
 
 Or maybe you want to listen for any time something is clicked in the shopping cart: 
 
-```
+```javascript
 DropletJS.PubSub.listen('ShoppingCart.*.clicked');
 ```
 
@@ -195,19 +195,109 @@ DropletJS.PubSub.listen('ShoppingCart.*.clicked');
 coming soon
 
 ## API
-### listen('someMessage',messageHandler) OR listen(configObj)
 ---
-### once('someMessage',messageHandler) OR once(configObj)
+### listen
+
+The `listen` message tells DropletJS.PubSub which message(s) to listen for, and which function to use when handling the message. There are two valid ways to call `listen`:
+
+##### listen('someMessage',messageHandler)
+
+* [REQUIRED] *someMessage:* Message string or array of messages to listen for
+* [REQUIRED] *messageHandler:* Function to call when message is published
+
+```javascript
+// Listen for one message
+DropletJS.PubSub.listen('ShoppingCart.item.added',function(message,payload){
+    console.log('Item added');
+});
+```
+
+```javascript
+// Listen for array of messages
+var messages = [
+    'ShoppingCart.item.added',
+    'WishList.item.added',
+    'Favorites.item.added'
+];
+
+DropletJS.PubSub.listen(messages,function(message,payload){
+    console.log('Item added');
+});
+```
+
+##### listen(configObj)
+
+`configObj` is an object literal with the following properties:
+
+* [REQUIRED] *message:* Message string or array of messages to listen for
+* [REQUIRED] *handler:* Function to call when message is published
+* [OPTIONAL] *async:* Boolean. False by default. Set to true if handler is asynchronous.
+
+```javascript
+DropletJS.PubSub.listen({
+    message : 'ShoppingCart.item.added', // can also be an array of messages
+    handler : function(message,payload){
+        console.log('Item added')
+    },
+    async : true
+});
+```
+
+When the handler function is called, it will be passed several arguments ...
+
+```javascript
+messageHandler(message,payload)
+```
+
+... where `message` is the message that triggered the handler, and `payload` is an arbitrary value (usually an object literal) passed by the `publish()` function. 
+
+In addition, there is a third `onPublish` callback that will be passed to the handler when `async` is true:
+
+```javascript
+messageHandler(message,payload,onPublish)
+```
+
+This `onPublish` callback is defined when the `publish()` method is called. It can be used to pass results from the asynchronous handler back to the originator of the message.
+
+```javascript
+var messageHandler = function(message,payload,onPublish){
+    
+    // Async AJAX request
+    $.ajax("example.php").done(function(result){
+    
+        // Pass result of async request to onPublish() callback
+        onPublish(result);
+    });
+};
+
+DropletJS.PubSub.listen({
+    message : 'ShoppingCart.item.added',
+    handler : messageHandler,
+    async : true
+});
+```
+
 ---
-### publish('someMessage',payload) OR publish(configObj)
+### once
+##### once('someMessage',messageHandler)
+##### once(configObj)
 ---
-### stop('someMessage')
+### publish
+##### publish('someMessage',payload)
+##### publish(configObj)
 ---
-### subscribe(handler) or subscribe(configObj)
+### stop
+##### stop('someMessage')
 ---
-### unsubscribe(namespace,phase) or unsubscribe(configObj)
+### subscribe
+##### subscribe(handler)
+##### subscribe(configObj)
 ---
-### clear()
+### unsubscribe
+##### unsubscribe(namespace,phase)
+##### unsubscribe(configObj)
+---
+### clear
 ---
 ## FAQ
 
