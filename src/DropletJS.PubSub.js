@@ -488,7 +488,6 @@ if (typeof MINIFIED === 'undefined'){
         /**
          * Valid forms:
          *
-         * PubSub.publish('someMessage');
          * PubSub.publish('someMessage',payloadObject);
          *
          * PubSub.publish({
@@ -834,6 +833,10 @@ if (typeof MINIFIED === 'undefined'){
             }
 
             options.message             = this.toMessage(options.message);
+
+            if (options.async && typeof options.onPublish !== 'function'){
+                options.onPublish       = function(){};
+            }
 
             return options;
         },
