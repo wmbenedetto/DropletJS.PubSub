@@ -251,29 +251,29 @@ messageHandler(message,payload)
 
 ... where `message` is the message that triggered the handler, and `payload` is an arbitrary value (usually an object literal) passed by the `publish()` function. 
 
-In addition, there is a third `onPublish` callback that will be passed to the handler when `async` is true:
+In addition, there is a third argument (`callback`) that will be passed to the handler when `async` is true. This can be used to pass results from the asynchronous handler back to the originator of the message.
 
 ```javascript
-messageHandler(message,payload,onPublish)
-```
-
-This `onPublish` callback is defined when the `publish()` method is called. It can be used to pass results from the asynchronous handler back to the originator of the message.
-
-```javascript
-var messageHandler = function(message,payload,onPublish){
-    
-    // Async AJAX request
-    $.ajax("example.php").done(function(result){
-    
-        // Pass result of async request to onPublish() callback
-        onPublish(result);
-    });
-};
-
 DropletJS.PubSub.listen({
     message : 'ShoppingCart.item.added',
-    handler : messageHandler,
-    async : true
+    async : true,
+    handler : function(message,payload,callback){
+    
+        // Async AJAX request
+        $.ajax("example.php").done(function(result){
+        
+            // Pass result of async request to callback
+            callback(result);
+        });
+    }
+});
+
+// The onPublish() function is the callback that gets passed to an asynchronous listener
+DropletJS.PubSub.publish({
+    message : 'ShoppingCart.item.added',
+    onPublish : function(result){
+        console.log('The result of the listener is ', result);
+    }
 });
 ```
 
