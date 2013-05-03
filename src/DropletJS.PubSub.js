@@ -582,7 +582,7 @@ if (typeof MINIFIED === 'undefined'){
         },
 
         /**
-         * Clears all handlers and subscribers
+         * Clears all handlers and subscribers.
          */
         clear : function(){
 
