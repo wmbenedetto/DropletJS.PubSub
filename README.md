@@ -384,6 +384,8 @@ The handler is passed two arguments:
 
 ##### subscribe(configObj)
 
+`configObj` is an object literal with the following properties:
+
 * [REQUIRED] *handler:* Function to call every time a message is published
 * [OPTIONAL] *namespace:* Namespace string. Can be used with `unsubscribe` to later remove only subscribers in the namespace.
 * [OPTIONAL] *phase:* Either **before** or **after**. If "before", handler is executed before the message listeners are executed. If "after" (or if omitted), handler is executed after the message listeners are executed.
@@ -411,10 +413,42 @@ The handler is passed two or three arguments:
 
 ---
 ### unsubscribe
+
+The `unsubscribe` method removes subscribers. There are two valid ways to call `unsubscribe`:
+
 ##### unsubscribe(namespace,phase)
+
+* [OPTIONAL] *namespace:* If specified, removes only subscribers in that namespace. If no namespace is specified, then any subscribers added without a namespace are removed.
+* [OPTIONAL] *phase:* If specified, only subscribers in that phase will be removed. If no phase is specified, then subscribers in both phases will be removed.
+
+```javascript
+DropletJS.PubSub.unsubscribe('SomeNamespace','before');
+```
+
 ##### unsubscribe(configObj)
+
+`configObj` is an object literal with the following properties:
+
+* [OPTIONAL] *namespace:* If specified, removes only subscribers in that namespace. If no namespace is specified, then any subscribers added without a namespace are removed.
+* [OPTIONAL] *phase:* If specified, only subscribers in that phase will be removed. If no phase is specified, then subscribers in both phases will be removed.
+
+```javascript
+DropletJS.PubSub.unsubscribe({
+    namespace : 'SomeNamespace',
+    phase : 'before'
+});
+```
+
 ---
+
 ### clear
+
+The `clear` method removes **all** handlers and subscribers.
+
+```javascript
+DropletJS.PubSub.clear();
+```
+
 ---
 ## FAQ
 
