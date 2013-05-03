@@ -88,7 +88,7 @@ These callbacks are executed after *all* message handlers are executed. They can
 
 These callbacks are executed after *each* message handler is executed. They can be used to fire off high-priority functions that can't wait for the entire listener stack to finish executing, especially if the listeners are asynchronous functions that can take a while to complete.
 
-Alternately, onPublish callbacks can be used to receive the results of asynchronous listeners (see below).
+Alternately, onPublish callbacks can be used to receive the results of listeners (see below).
 
 ### Asynchronous listeners
 
@@ -286,15 +286,129 @@ The `once` message tells DropletJS.PubSub to listen for a message (or messages) 
 
 ---
 ### publish
+
+The `publish` method broadcasts a message, executing all the handlers which are listening for that message. There are two valid ways to call `publish`:
+
 ##### publish('someMessage',payload)
+
+* [REQUIRED] *someMessage:* Message string or array of messages to publish
+* [OPTIONAL] *payload:* Data object passed to listener
+
+```javascript
+// Publish one message
+DropletJS.PubSub.publish('ShoppingCart.item.added',{
+    sku : 1234567890,
+    accountID : 123
+});
+```
+
+```javascript
+// Publish an array of messages
+var messages = [
+    'ShoppingCart.item.added',
+    'ShoppingCart.button.clicked.ADD'
+];
+
+DropletJS.PubSub.publish(messages,{
+    sku : 1234567890,
+    accountID : 123
+});
+```
+
 ##### publish(configObj)
+
+`configObj` is an object literal with the following properties:
+
+* [REQUIRED] *message:* Message string or array of messages to publish
+* [OPTIONAL] *payload:* Data object passed to listener
+* [OPTIONAL] *onPublish:* Function to call after **each** listener is executed. The results of the listener are returned to this function. It will be called asynchronously if the listener's `async` property is `true`.
+* [OPTIONAL] *onComplete:* Function to call once **all** listeners have been executed
+
+```javascript
+DropletJS.PubSub.publish({
+    message : 'ShoppingCart.item.added', // can also be an array of messages
+    payload : {
+        sku : 1234567890,
+        accountID : 123
+    },
+    onPublish : function(result){
+        console.log('Handler result:',result);
+    },
+    onComplete : function(){
+        console.log('DONE!')
+    }
+});
+```
+
 ---
 ### stop
+
+The `stop` method tells DropletJS.PubSub to stop listening for a message or messages.
+
 ##### stop('someMessage')
+
+* [REQUIRED] *message:* The message(s) to stop listening for
+
+```javascript
+// Stop listening for one message
+DropletJS.PubSub.stop('ShoppingCart.item.added');
+```
+
+```javascript
+// Stop listening for an for array of messages
+DropletJS.PubSub.stop([
+    'ShoppingCart.item.added',
+    'WishList.item.added',
+    'Favorites.item.added'
+]);
+```
 ---
 ### subscribe
+
+The `subscribe` method allows you to specify a handler which will be called every time a message is published. There are two valid ways to call `subscribe`:
+
 ##### subscribe(handler)
+
+* [REQUIRED] *handler:* Function to call every time a message is published. Called after all listeners have been executed.
+
+```javascript
+DropletJS.PubSub.subscribe(function(message,payload){
+    // do stuff here
+});
+```
+
+The handler is passed two arguments:
+
+* [REQUIRED] *message:* Message that was published
+* [REQUIRED] *payload:* Data object accompanying message
+
 ##### subscribe(configObj)
+
+* [REQUIRED] *handler:* Function to call every time a message is published
+* [OPTIONAL] *namespace:* Namespace string. Can be used with `unsubscribe` to later remove only subscribers in the namespace.
+* [OPTIONAL] *phase:* Either **before** or **after**. If "before", handler is executed before the message listeners are executed. If "after" (or if omitted), handler is executed after the message listeners are executed.
+* [OPTIONAL] *async:* Set to true if handler is asynchronous
+
+```javascript
+DropletJS.PubSub.subscribe({
+    handler : function(message,payload,callback){
+        
+        //do stuff
+        
+        callback();
+    },
+    namespace : 'SomeNamespace',
+    phase : 'before',
+    async : true
+});
+```
+
+The handler is passed two or three arguments:
+
+* [REQUIRED] *message:* Message that was published
+* [REQUIRED] *payload:* Data object accompanying message
+* [OPTIONAL] *callback:* Function to call once handler is complete, when `async` is true
+
 ---
 ### unsubscribe
 ##### unsubscribe(namespace,phase)
