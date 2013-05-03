@@ -14,6 +14,28 @@ Or you can use some events-only micro-framework with a negligible file size and 
 
 However, if you've used any of those solutions and have found them lacking, then you should take DropletJS.PubSub out for a spin.
 
+## Quick install
+
+DropletJS.PubSub is available via a number of popular package managers:
+
+### NPM
+
+```
+npm install dropletjs.pubsub
+```
+
+### JamJS
+```
+jam install DropletJS.PubSub
+```
+
+### Bower
+```
+bower install DropletJS.PubSub
+```
+
+Or you can download the latest tag from https://github.com/wmbenedetto/DropletJS.PubSub/tags
+
 ## Core principles
 
 There are a few core principles behind DropletJS.PubSub that may make it the right choice for your app:
@@ -98,14 +120,6 @@ Listeners can be flagged as asynchronous. Asynchronous listeners allow you to re
 
 DropletJS.PubSub's `listen`, `once`, `publish`, and `stop` methods all accept arrays of messages, so you can simultaneously publish multiple messages, or you can listen for multiple messages using the same handler. 
 
-## Quick install
-
-coming soon
-
-## Quick start
-
-coming soon
-
 ## Messages
 
 DropletJS.PubSub refers to events as *messages*. Messages are published; listeners and subscribers handle published messages.
@@ -189,10 +203,6 @@ Or maybe you want to listen for any time something is clicked in the shopping ca
 ```javascript
 DropletJS.PubSub.listen('ShoppingCart.*.clicked');
 ```
-
-## Examples
-
-coming soon
 
 ## API
 ---
@@ -450,7 +460,12 @@ DropletJS.PubSub.clear();
 ```
 
 ---
-## FAQ
+
+## Examples
+
+coming soon
+
+---
 
 ## Questions? Bugs? Suggestions?
 
