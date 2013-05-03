@@ -279,8 +279,11 @@ DropletJS.PubSub.publish({
 
 ---
 ### once
-##### once('someMessage',messageHandler)
-##### once(configObj)
+
+The `once` message tells DropletJS.PubSub to listen for a message (or messages) one time, and which function to use when handling the message. After the `once` handler has been called, the message is no longer listened for.
+
+`once` is called exactly like `listen` above: either `once('someMessage',messageHandler)` or `once(configObj)`.
+
 ---
 ### publish
 ##### publish('someMessage',payload)
