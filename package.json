@@ -1,6 +1,6 @@
 {
     "name"                      : "dropletjs.pubsub",
-    "version"                   : "0.1.0",
+    "version"                   : "0.1.1",
     "description"               : "DropletJS.PubSub is an advanced JavaScript event library, specifically designed for building highly complex web apps.",
     "keywords"                  : ["event","pubsub","observer","observable","eventemitter"],
     "categories"                : ["Events"],
