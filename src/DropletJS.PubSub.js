@@ -180,13 +180,13 @@ if (typeof MINIFIED === 'undefined'){
          * rest of the message string */
         if (msgString.indexOf(':') > -1){
             this.namespace              = msgString.substr(0,msgString.indexOf(':'));
-            msgString                   = msgString.substr((msgString.indexOf(':')+1),msgString.length);
+            msgString                   = msgString.substr((msgString.indexOf(':')+1), msgString.length);
         }
 
         if (msgString.indexOf('.') > -1){
 
             var msgArray                = msgString.split('.');
-            this.msgArray               = [msgArray[0] || '*',msgArray[1] || '*',msgArray[2] || '*', msgArray[3] || '*'];
+            this.msgArray               = [msgArray[0] || '*', msgArray[1] || '*', msgArray[2] || '*', msgArray[3] || '*'];
             this.msgString              = this.msgArray.join('.');
 
         } else {
@@ -904,7 +904,7 @@ if (typeof MINIFIED === 'undefined'){
             return PubSub;
         });
     }
-    /* If module.exports is available, use that to export Brightline */
+    /* If module.exports is available, use that to export methods */
     else if (typeof module !== 'undefined' && module.exports) {
         module.exports = PubSub;
     }
