@@ -375,7 +375,7 @@ if (typeof MINIFIED === 'undefined'){
          */
         stop : function(message){
 
-            if (message){
+            if (!message){
                 throw new Error('Message(s) must be passed to stop()');
             }
 
